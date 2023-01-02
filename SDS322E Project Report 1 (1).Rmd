@@ -1,0 +1,428 @@
+---
+title: "SDS322E Project Report 1"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE,  
+                      warning = FALSE, message = FALSE, 
+                      fig.align = "center",
+                      R.options = list(max.print=100))
+# Edit the file starting below
+```
+
+## Names: Lea Hur, Jack Misukanis, Harini Shanmugam
+
+------------------------------------------------------------------------
+
+## 1. Title and Introduction
+
+We wanted to look at income disparity from the the view point of variables not commonly studied. Sources are from the United States Census Bureau webpage.
+
+```{r}
+# Loading all necessary libraries
+# To use read_excel() function
+library(readxl)
+# To use dplyr and ggplot functions
+library(tidyverse)
+
+# All data sets loaded in as objects for future use in next steps
+# Age
+age <- read_excel("pinc01_1_1_1.xlsx", sheet = 4)
+
+# Educational Attainment
+edu <- read_excel("pinc03_1_1_1_1.xlsx")
+
+# Marital Status
+marital <- read_excel("pinc02_1_1_1.xlsx")
+
+# Relationship to Family Household
+relation <- read_excel("pinc01_1_1_1.xlsx", sheet = 5)
+
+# Sources of Income
+source <- read_excel("pinc08_1_1_1.xlsx")
+
+# Tenure (owner or renter of residence)
+tenure <- read_excel("pinc01_1_1_1.xlsx", sheet = 7)
+```
+
+------------------------------------------------------------------------
+
+## 2. Tidying
+
+Age
+
+```{r}
+# Save changes to new object
+age2 <- age %>%
+  # Only keep rows 1, 2, 5, 8, 11, 15, and 18
+  slice(1,2,5,8,11,15,18) %>%
+  # Pivot first row (levels of income) into a column (income levels)
+  # -1 excludes the first column from pivoting
+  pivot_longer(-1, names_to = "Income Level",
+               values_to = "# of People") %>%
+  rename("Age" = "Characteristic") %>%
+  # Display Age column first and then every other column as they were
+  select("Age", everything())
+```
+
+Education Attainment Level
+
+```{r}
+# Save changes to new object
+edu2 <- edu %>%
+  # Pivot first row (levels of income) into a column (income levels)
+  # -1 excludes the first column from pivoting
+  pivot_longer(-1, names_to = "Education Level",
+               values_to = "# of People") %>%
+  rename("Income Level" = "Characteristic") %>%
+  # Display Education Level column first and then every other column as they were
+  select("Education Level", everything())
+```
+
+Marital Status
+
+```{r}
+# Save changes to new object
+marital2 <- marital %>%
+  # Change the values from columns 2 to 6 to numeric values
+  mutate_at(2:7,as.numeric) %>%
+  # Only keep rows 1 to 41
+  slice(1:41) %>%
+  # Pivot first row (levels of income) into a column (income levels)
+  # -1 excludes the first column from pivoting
+  pivot_longer(-1, names_to = "Marital Status",
+               values_to = "# of People") %>%
+  rename("Income Level" = "Characteristic") %>%
+  # Display Marital Status column first and then every other column as they were
+  select("Marital Status", everything())
+```
+
+Relationship to Family Householder
+
+```{r}
+# Save changes to new object
+relation2 <- relation %>%
+  # Pivot first row (levels of income) into a column (income levels)
+  # -1 excludes the first column from pivoting
+  pivot_longer(-1, names_to = "Income Level",
+               values_to = "# of People") %>%
+  rename("Relationship to Family Household" = "Characteristic")
+```
+
+Sources of Income
+
+```{r}
+# Save changes to new object
+source2 <- source %>%
+  # Remove values that read 'NA'
+  na_if("NA") %>%
+  # Change the values from columns 2 to 42 to numeric values
+  mutate_at(2:42,as.numeric) %>%
+  # Only look at the data from rows 3, 6, 14, 18, and 35 in the data set
+  slice(3,6,14,18,35) %>%
+  # Pivot first row (levels of income) into a column (income levels)
+  # -1 excludes the first column from pivoting
+  pivot_longer(-1, names_to = "Income Level",
+               values_to = "# of People") %>%
+  rename("Type of Source of Income" = "Characteristic")
+```
+
+Tenure (owner/renter status of residence)
+
+```{r}
+# Save changes to new object
+tenure2 <- tenure %>%
+  # Pivot first row (levels of income) into a column (income levels)
+  # -1 excludes the first column from pivoting
+  pivot_longer(-1, names_to = "Income Level",
+               values_to = "# of People") %>%
+  rename("Tenure Type" = "Characteristic")
+```
+
+------------------------------------------------------------------------
+
+## 3. Joining/Merging
+
+```{r}
+# Joining all 6 data sets by the common variable 'Income Level'
+all <- age2 %>%
+  full_join(edu2, by = "Income Level") %>%
+  full_join(marital2, by = "Income Level") %>%
+  full_join(relation2, by = "Income Level") %>%
+  full_join(source2, by = "Income Level") %>%
+  full_join(tenure2, by = "Income Level")
+```
+
+**Total observations and unique IDs in each data set:**
+
+Age
+
+-   287 observations
+
+-   7 unique IDs
+
+Educational Attainment
+
+-   410 observations
+
+-   9 unique IDs
+
+Marital Status
+
+-   246 observations
+
+-   6 unique IDs
+
+Relationship to Family Household
+
+-   205 observations
+
+-   5 unique IDs
+
+Sources of Income
+
+-   205 observations
+
+-   5 unique IDs
+
+Tenure (owner or renter of residence)
+
+-   123 observations
+
+-   3 unique IDs
+
+**IDs that appear in one dataset but not the other:** All of the IDs but 'Income Levels' appear only in their data set and not the others
+
+**IDs in common:** The only ID in common is "Income Levels"
+
+**IDs in common:** There are no IDs that were left out
+
+**Observations/ rows that were dropped/added when joining the data sets:** No rows were dropped when joining the data sets
+
+------------------------------------------------------------------------
+
+## 4. Wrangling
+
+```{r}
+all %>%
+  select(`Income Level`,`Tenure Type`,`# of People.y.y.y`) %>%
+  filter(`Income Level`=="$1 to $2,499 or loss" | `Income Level`=="$2,500 to $4,999") %>%
+  arrange(`Income Level`) %>%
+  distinct(`# of People.y.y.y`, .keep_all = TRUE)
+
+ 
+all %>%
+  group_by(`Type of Source of Income`) %>%
+  distinct(`# of People.x.x.x`, .keep_all = TRUE) %>%
+  select(`Income Level`, `# of People.x.x.x`) %>%
+  filter(`Type of Source of Income` == "Wages and salary") %>%
+  mutate(proportion = `# of People.x.x.x`/ sum(`# of People.x.x.x`)) %>%
+  summarize(max = max(`# of People.x.x.x`, na.rm=TRUE))
+
+
+
+
+#dat[duplicated(dat[,1:2]),]
+#mutate()
+#summarize(mean=, na.rm=TRUE)
+
+#summary(all)
+```
+
+------------------------------------------------------------------------
+
+## 5. Visualizing
+
+```{r}
+# source (count of each of type of sources income)
+# tenure (count of each of type of tenure)
+
+# age and source 
+# edu and tenure
+# income and relation
+
+# income by tenure by age
+# income by relation by marital
+```
+
+ONE VARIABLE
+
+```{r}
+# Bar chart of age
+age2 %>%
+  group_by(`Age`) %>%
+  summarize(count = sum(`# of People`)) %>%
+  ggplot(aes(x=`Age`, y=count)) +
+  geom_bar(stat="identity") +
+  labs(title="Distribution of Income Earners by Age",
+       subtitle = "in the US in 2021",
+       caption = "Source: US Census Bureau, 2021",
+       x="Age",
+       y="# of People (in thousands)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+# Bar chart of education levels
+edu2 %>%
+  group_by(`Education Level`) %>%
+  summarize(total = sum(`# of People`)) %>%
+  ggplot(aes(x=`Education Level`, y=total)) +
+  geom_bar(stat="identity") +
+  labs(title="Distribution of Income Earners by Education Type Attained",
+       subtitle = "in the US in 2021",
+       caption = "Source: US Census Bureau, 2021",
+       x="Education Type",
+       y="# of People (in thousands)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+# Bar chart of marital status
+marital2 %>%
+  group_by(`Marital Status`) %>%
+  summarize(total = sum(`# of People`)) %>%
+  ggplot(aes(x=`Marital Status`, y=total)) +
+  geom_bar(stat="identity") +
+  labs(title="Distribution of Income Earners by Marital Status",
+       subtitle = "in the US in 2021",
+       caption = "Source: US Census Bureau, 2021",
+       x="Tenure Type",
+       y="# of People (in thousands)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+# Bar chart of different types of tenure
+relation2 %>%
+  group_by(`Relationship to Family Household`) %>%
+  summarize(total = sum(`# of People`)) %>%
+  ggplot(aes(x=`Relationship to Family Household`, y=total)) +
+  geom_bar(stat="identity") +
+  labs(title="Distribution of Income Earners by Relation to Family Householder",
+       subtitle = "in the US in 2021",
+       caption = "Source: US Census Bureau, 2021",
+       x="Tenure Type",
+       y="# of People (in thousands)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+KEEP ONLY THESE TWO
+>>>>>
+>>>>
+>>>
+>>
+>
+
+
+```{r}
+# Bar chart of type of source of income
+source2 %>%
+  group_by(`Type of Source of Income`) %>%
+  summarize(total = sum(`# of People`)) %>%
+  ggplot(aes(x=`Type of Source of Income`, y=total)) +
+  geom_bar(stat="identity") +
+  labs(title="Distribution of Type of Source of Income",
+       subtitle = "in the US in 2021",
+       caption = "Source: US Census Bureau, 2021",
+       x="Type of Source of Income",
+       y="# of People (in thousands)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+# Bar chart of different types of tenure
+tenure2 %>%
+  group_by(`Tenure Type`) %>%
+  summarize(total = sum(`# of People`)) %>%
+  ggplot(aes(x=`Tenure Type`, y=total)) +
+  geom_bar(stat="identity") +
+  labs(title="Distribution of Income Earners by Tenure",
+       subtitle = "in the US in 2021",
+       caption = "Source: US Census Bureau, 2021",
+       x="Tenure Type",
+       y="# of People (in thousands)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+>
+>>
+>>>
+>>>>
+>>>>>
+
+
+TWO VARIABLES
+
+```{r}
+# Bar chart of different ages
+age2 %>%
+  group_by(`Age`, `Income Level`) %>%
+  summarize(total = sum(`# of People`)) %>%
+  ggplot(aes(x=`Age`, y=total, fill=`Income Level`)) +
+  geom_bar(stat="identity", position="stack") +
+  labs(title="Summary by Groups",
+       x="Age",
+       y="# of People (in thousands)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+age2 %>%
+  group_by(`Income Level`, `Age`) %>%
+  summarize(total = sum(`# of People`)) %>%
+  ggplot(aes(x=`Income Level`, y=total, fill=`Age`)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  labs(title="Summary by Groups",
+       x="Income Levels",
+       y="# of People (in thousands)") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+# PERHAPS MOSAIC PLOT
+# Bar chart of different types of tenure
+tenure2 %>%
+  group_by(`Tenure Type`, `Income Level`) %>%
+  summarize(total = sum(`# of People`)) %>%
+  ggplot(aes(x=`Tenure Type`, y=total, fill=`Income Level`)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  labs(title="Summary by Groups",
+       x="Tenure Type",
+       y="# of People (in thousands)")
+```
+
+```{r}
+# Bar chart of different types of source
+source2 %>%
+  group_by(`Type of Source of Income`, `Income Level`) %>%
+  summarize(total = sum(`# of People`)) %>%
+  ggplot(aes(x=`Type of Source of Income`, y=total, fill=`Income Level`)) +
+  geom_bar(stat="identity", position="stack") +
+  labs(title="Summary by Groups",
+       x="Type of Source of Income",
+       y="# of People (in thousands)")
+```
+
+THREE VARIABLES
+
+```{r}
+# Count of Age and Source
+age2 %>%
+  inner_join(source2, by = "Income Level") %>%
+  group_by(`Age`, `Type of Source of Income`) %>%
+  summarize(total = sum(`# of People.y`)) %>%
+  ggplot(aes(x=`Age`, y=total, fill=`Type of Source of Income`)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  labs(title="Summary by Groups",
+       x="Age",
+       y="# of People (in thousands)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+------------------------------------------------------------------------
+
+## 6. Formatting
